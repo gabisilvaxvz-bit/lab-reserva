@@ -6,15 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LABORATORIES, AVAILABLE_HOURS, Reservation } from "@/lib/constants";
+import toast from "react-hot-toast";
 
 interface ReservationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (reservation: Omit<Reservation, "id">) => void;
   todayString: string;
+  isLoading?: boolean;
 }
 
-export function ReservationModal({ isOpen, onClose, onSubmit, todayString }: ReservationModalProps) {
+export function ReservationModal({ isOpen, onClose, onSubmit, todayString, isLoading }: ReservationModalProps) {
   const [requester, setRequester] = useState("");
   const [lab, setLab] = useState(LABORATORIES[0].id);
   const [date, setDate] = useState("");
@@ -24,13 +26,14 @@ export function ReservationModal({ isOpen, onClose, onSubmit, todayString }: Res
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Substituindo os alerts pelo toast.error
     if (!requester || !date || !startTime || !endTime) {
-      alert("Por favor, preencha todos os campos.");
+      toast.error("Por favor, preencha todos os campos.");
       return;
     }
 
     if (parseInt(startTime) >= parseInt(endTime)) {
-      alert("O horário de fim deve ser posterior ao horário de início.");
+      toast.error("O horário de fim deve ser posterior ao horário de início.");
       return;
     }
 
@@ -102,8 +105,12 @@ export function ReservationModal({ isOpen, onClose, onSubmit, todayString }: Res
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit">Confirmar Reserva</Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "A Guardar..." : "Confirmar Reserva"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
