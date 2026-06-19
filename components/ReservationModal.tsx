@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LABORATORIES, AVAILABLE_HOURS, Reservation } from "@/lib/constants";
+import { isValidTimeRange } from "@/lib/reservations";
 import toast from "react-hot-toast";
 
 interface ReservationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (reservation: Omit<Reservation, "id">) => void;
+  onSubmit: (reservation: Omit<Reservation, "id">) => Promise<void>;
   todayString: string;
   isLoading?: boolean;
 }
@@ -23,31 +24,42 @@ export function ReservationModal({ isOpen, onClose, onSubmit, todayString, isLoa
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Substituindo os alerts pelo toast.error
-    if (!requester || !date || !startTime || !endTime) {
-      toast.error("Por favor, preencha todos os campos.");
-      return;
-    }
-
-    if (parseInt(startTime) >= parseInt(endTime)) {
-      toast.error("O horário de fim deve ser posterior ao horário de início.");
-      return;
-    }
-
-    onSubmit({ requesterName: requester, labId: lab, date, startTime, endTime });
-    
-    // Limpar formulário
+  const resetForm = () => {
     setRequester("");
+    setLab(LABORATORIES[0].id);
     setDate("");
     setStartTime("");
     setEndTime("");
   };
 
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!requester || !date || !startTime || !endTime) {
+      toast.error("Por favor, preencha todos os campos.");
+      return;
+    }
+
+    if (!isValidTimeRange(startTime, endTime)) {
+      toast.error("O horário de fim deve ser posterior ao horário de início.");
+      return;
+    }
+
+    try {
+      await onSubmit({ requesterName: requester, labId: lab, date, startTime, endTime });
+      resetForm();
+    } catch {
+      return;
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -94,7 +106,7 @@ export function ReservationModal({ isOpen, onClose, onSubmit, todayString, isLoa
                   <SelectTrigger id="hora-fim"><SelectValue placeholder="00:00" /></SelectTrigger>
                   <SelectContent>
                     {AVAILABLE_HOURS.map((hour) => (
-                      <SelectItem key={hour} value={hour} disabled={startTime ? parseInt(hour) <= parseInt(startTime) : false}>
+                      <SelectItem key={hour} value={hour} disabled={startTime ? hour <= startTime : false}>
                         {hour}
                       </SelectItem>
                     ))}
@@ -105,7 +117,7 @@ export function ReservationModal({ isOpen, onClose, onSubmit, todayString, isLoa
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>

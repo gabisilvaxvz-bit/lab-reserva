@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MONTH_NAMES, Reservation } from "@/lib/constants";
+import { formatLocalDateInput } from "@/lib/reservations";
 
 interface CalendarProps {
   currentMonth: Date;
@@ -28,7 +29,7 @@ export function Calendar({
     const dayOfWeek = date.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) return "fim-de-semana";
 
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+    const dateString = formatLocalDateInput(date);
     const hasReservations = reservations.some(r => r.date === dateString);
     
     return hasReservations ? "com-reservas" : "disponivel";

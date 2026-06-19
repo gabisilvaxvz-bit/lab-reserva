@@ -1,63 +1,105 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import {
+  isLabId,
+  isValidDateInput,
+  isValidHour,
+  isValidTimeRange,
+  type ReservationInput,
+} from "@/lib/reservations";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { requesterName, labId, date, startTime, endTime } = body;
+    const body: unknown = await request.json();
+    const { requesterName, labId, date, startTime, endTime } = body as Partial<ReservationInput>;
 
-    // 1. Validação básica dos dados recebidos
-    if (!requesterName || !labId || !date || !startTime || !endTime) {
+    if (
+      typeof requesterName !== "string" ||
+      typeof labId !== "string" ||
+      typeof date !== "string" ||
+      typeof startTime !== "string" ||
+      typeof endTime !== "string"
+    ) {
       return NextResponse.json(
         { error: "Todos os campos obrigatórios devem ser preenchidos." },
-        { status: 400 } 
+        { status: 400 }
       );
     }
 
-    // 2. Validação de lógica de negócio (início antes do fim)
-    if (parseInt(startTime) >= parseInt(endTime)) {
+    const normalizedRequesterName = requesterName.trim();
+    const normalizedLabId = labId.trim();
+    const normalizedDate = date.trim();
+    const normalizedStartTime = startTime.trim();
+    const normalizedEndTime = endTime.trim();
+
+    if (!normalizedRequesterName) {
+      return NextResponse.json(
+        { error: "O nome do solicitante é obrigatório." },
+        { status: 400 }
+      );
+    }
+
+    if (!isLabId(normalizedLabId)) {
+      return NextResponse.json(
+        { error: "Laboratório inválido." },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidDateInput(normalizedDate)) {
+      return NextResponse.json(
+        { error: "Data inválida." },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidHour(normalizedStartTime) || !isValidHour(normalizedEndTime)) {
+      return NextResponse.json(
+        { error: "Horário inválido." },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidTimeRange(normalizedStartTime, normalizedEndTime)) {
       return NextResponse.json(
         { error: "A hora de início deve ser anterior à hora de fim." },
         { status: 400 }
       );
     }
 
-    // 3. NOVA VALIDAÇÃO: Verificar sobreposição de horários no banco de dados
     const overlappingReservation = await prisma.reservation.findFirst({
       where: {
-        labId: labId, // Tem que ser no mesmo laboratório
-        date: date,   // Tem que ser no mesmo dia
+        labId: normalizedLabId,
+        date: normalizedDate,
         AND: [
-          // A nova reserva começa antes da existente terminar?
-          { startTime: { lt: endTime } }, 
-          // A nova reserva termina depois da existente começar?
-          { endTime: { gt: startTime } }  
+          { startTime: { lt: normalizedEndTime } },
+          { endTime: { gt: normalizedStartTime } },
         ]
       }
     });
 
-    // Se encontrou alguma reserva que bate com as condições acima, bloqueia.
     if (overlappingReservation) {
       return NextResponse.json(
-        { error: `Este laboratório já está reservado neste horário (Choque com reserva das ${overlappingReservation.startTime} às ${overlappingReservation.endTime}).` },
-        { status: 409 } // 409 Conflict: O pedido entra em conflito com o estado atual do servidor
+        {
+          error: `Este laboratório já está reservado neste horário (choque com reserva das ${overlappingReservation.startTime} às ${overlappingReservation.endTime}).`,
+        },
+        { status: 409 }
       );
     }
 
-    // 4. Persistência no banco de dados
     const novaReserva = await prisma.reservation.create({
       data: {
-        requesterName,
-        labId,
-        date,
-        startTime,
-        endTime,
+        requesterName: normalizedRequesterName,
+        labId: normalizedLabId,
+        date: normalizedDate,
+        startTime: normalizedStartTime,
+        endTime: normalizedEndTime,
       },
     });
 
     return NextResponse.json(
       { success: true, data: novaReserva },
-      { status: 201 } 
+      { status: 201 }
     );
 
   } catch (error) {
@@ -73,8 +115,8 @@ export async function GET() {
   try {
     const reservas = await prisma.reservation.findMany({
       orderBy: [
-        { date: 'asc' },      // Ordena primeiro pela data
-        { startTime: 'asc' }  // Depois pelo horário de início
+        { date: "asc" },
+        { startTime: "asc" }
       ]
     });
 

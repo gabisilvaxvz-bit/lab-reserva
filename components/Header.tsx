@@ -1,10 +1,11 @@
 // components/Header.tsx
 import { Button } from "@/components/ui/button";
 import { LABORATORIES } from "@/lib/constants";
+import type { LabFilter } from "@/lib/reservations";
 
 interface HeaderProps {
-  selectedFilter: string;
-  onSelectFilter: (id: string) => void;
+  selectedFilter: LabFilter;
+  onSelectFilter: (id: LabFilter) => void;
   onOpenModal: () => void;
 }
 

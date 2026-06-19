@@ -2,6 +2,7 @@
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LABORATORIES, MONTH_NAMES, Reservation } from "@/lib/constants";
+import { formatBrazilianDate } from "@/lib/reservations";
 
 interface ReservationListProps {
   reservations: Reservation[];
@@ -9,11 +10,6 @@ interface ReservationListProps {
 }
 
 export function ReservationList({ reservations, selectedDate }: ReservationListProps) {
-  const formatDateBR = (isoDate: string) => {
-    const [y, m, d] = isoDate.split("-");
-    return `${d}/${m}/${y}`;
-  };
-
   return (
     <Card className="h-full flex flex-col shadow-sm border-primary/10">
       <CardHeader className="bg-muted/30 pb-4 border-b">
@@ -50,7 +46,7 @@ export function ReservationList({ reservations, selectedDate }: ReservationListP
                         {res.requesterName}
                       </p>
                       <span className="text-xs font-medium bg-muted px-2 py-0.5 rounded-md whitespace-nowrap">
-                        {formatDateBR(res.date)}
+                        {formatBrazilianDate(res.date)}
                       </span>
                     </div>
                     

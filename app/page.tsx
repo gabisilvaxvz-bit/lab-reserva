@@ -1,44 +1,44 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Calendar } from "@/components/Calendar";
 import { ReservationList } from "@/components/ReservationList";
 import { ReservationModal } from "@/components/ReservationModal";
 import { Reservation } from "@/lib/constants";
+import type { LabFilter } from "@/lib/reservations";
+import {
+  formatLocalDateInput,
+  sortReservationsByDateAndTime,
+} from "@/lib/reservations";
 import toast from "react-hot-toast";
 
 export default function ReservaLaboratorios() {
   const [isLoading, setIsLoading] = useState(false);
-  // Novo estado para controlar o carregamento inicial dos dados da API
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    return currentDate;
   }, []);
+  const todayString = formatLocalDateInput(today);
 
-  const todayString = today.toISOString().split("T")[0];
-
-  // Estados Globais
-  const [selectedLabFilter, setSelectedLabFilter] = useState<string | "todos">("todos");
+  const [selectedLabFilter, setSelectedLabFilter] = useState<LabFilter>("todos");
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Removido o dado estático, iniciando com array vazio
+
   const [reservations, setReservations] = useState<Reservation[]>([]);
 
-  // Busca as reservas do banco de dados ao carregar a página
   useEffect(() => {
     const fetchReservations = async () => {
       try {
-        const response = await fetch('/api/reservations');
+        const response = await fetch("/api/reservations");
         const result = await response.json();
 
         if (response.ok) {
-          setReservations(result.data);
+          setReservations(sortReservationsByDateAndTime(result.data));
         } else {
           toast.error(result.error || "Erro ao carregar as reservas.");
         }
@@ -53,49 +53,43 @@ export default function ReservaLaboratorios() {
     fetchReservations();
   }, []);
 
-  // Filtragem de Reservas para a Sidebar
   const upcomingReservations = useMemo(() => {
-    let filtered = reservations.filter(r => new Date(r.date).getTime() >= today.getTime());
-    
+    let filtered = reservations.filter((reservation) => reservation.date >= todayString);
+
     if (selectedLabFilter !== "todos") {
-      filtered = filtered.filter(r => r.labId === selectedLabFilter);
+      filtered = filtered.filter((reservation) => reservation.labId === selectedLabFilter);
     }
-    
+
     if (selectedCalendarDate) {
-      const selectedDateString = `${selectedCalendarDate.getFullYear()}-${(selectedCalendarDate.getMonth() + 1).toString().padStart(2, "0")}-${selectedCalendarDate.getDate().toString().padStart(2, "0")}`;
-      filtered = filtered.filter(r => r.date === selectedDateString);
+      const selectedDateString = formatLocalDateInput(selectedCalendarDate);
+      filtered = filtered.filter((reservation) => reservation.date === selectedDateString);
     }
 
     return filtered;
-  }, [reservations, selectedLabFilter, selectedCalendarDate, today]);
+  }, [reservations, selectedLabFilter, selectedCalendarDate, todayString]);
 
-  // Handler para adicionar nova reserva vinda do modal
   const handleAddReservation = async (newResData: Omit<Reservation, "id">) => {
-    setIsLoading(true); // Inicia o estado de carregamento
+    setIsLoading(true);
 
     try {
-      // 1. Faz a requisição POST para a sua API
-      const response = await fetch('/api/reservations', {
+      const response = await fetch("/api/reservations", {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(newResData),
       });
 
-      // 2. Converte a resposta para JSON
       const result = await response.json();
 
-      // 3. Verifica se a API retornou algum erro (status 400 ou 500)
       if (!response.ok) {
-        throw new Error(result.error || 'Erro desconhecido ao criar reserva.');
+        throw new Error(result.error || "Erro desconhecido ao criar reserva.");
       }
 
-      // 4. Se sucesso, adiciona a reserva retornada pelo banco ao estado local
-      setReservations(prev => 
-        [...prev, result.data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      setReservations((previousReservations) =>
+        sortReservationsByDateAndTime([...previousReservations, result.data]),
       );
-      
+
       setIsModalOpen(false);
       toast.success("Reserva confirmada com sucesso!"); 
 
@@ -103,7 +97,7 @@ export default function ReservaLaboratorios() {
       console.error("Erro na requisição:", error);
       toast.error(error instanceof Error ? error.message : "Ocorreu um erro ao comunicar com o servidor.");
     } finally {
-      setIsLoading(false); // Finaliza o estado de carregamento independente de dar erro ou sucesso
+      setIsLoading(false);
     }
   };
 
@@ -117,7 +111,6 @@ export default function ReservaLaboratorios() {
           onOpenModal={() => setIsModalOpen(true)} 
         />
 
-        {/* Exibe o estado de carregamento ou o conteúdo principal */}
         {isLoadingData ? (
           <div className="flex items-center justify-center h-[50vh]">
             <p className="text-muted-foreground animate-pulse text-lg font-medium">
