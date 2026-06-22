@@ -14,6 +14,9 @@ export const LABORATORIES = [
   { id: "informatica", name: "Informática", color: "bg-purple-500" },
   { id: "matematica", name: "Matemática", color: "bg-emerald-500" },
   { id: "linguas", name: "Línguas", color: "bg-amber-500" },
+  { id: "Eletromecânica", name: "Eletromecânica", color: "bg-blue-500" },
+  {id: "Hardwere", name: "Hardwere", color: "bg-purple-500" },
+  {id: "Datashows", name: "Datashows", color: "bg-emerald-500" },
 ];
 
 export const MONTH_NAMES = [
@@ -23,9 +26,25 @@ export const MONTH_NAMES = [
 
 export const generateHours = () => {
   const hours = [];
-  for (let i = 7; i <= 22; i++) {
-    hours.push(`${i.toString().padStart(2, "0")}:00`);
+
+  let hour = 7;
+  let minute = 10;
+
+  while (hour < 16 || (hour === 16 && minute <= 40)) {
+    hours.push(
+      `${hour.toString().padStart(2, "0")}:${minute
+        .toString()
+        .padStart(2, "0")}`
+    );
+
+    minute += 10; // intervalo de 10 minutos
+
+    if (minute === 60) {
+      minute = 0;
+      hour++;
+    }
   }
+
   return hours;
 };
 
