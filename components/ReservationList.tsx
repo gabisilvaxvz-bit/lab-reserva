@@ -1,15 +1,38 @@
 // components/ReservationList.tsx
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { LABORATORIES, MONTH_NAMES, Reservation } from "@/lib/constants";
 import { formatBrazilianDate } from "@/lib/reservations";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface ReservationListProps {
   reservations: Reservation[];
   selectedDate: Date | null;
+  onDeleteReservation: (reservationId: string) => Promise<void>;
+  onEditReservation: (reservation: Reservation) => void;
+  deletingReservationId: string | null;
 }
 
-export function ReservationList({ reservations, selectedDate }: ReservationListProps) {
+export function ReservationList({
+  reservations,
+  selectedDate,
+  onDeleteReservation,
+  onEditReservation,
+  deletingReservationId,
+}: ReservationListProps) {
   return (
     <Card className="h-full flex flex-col shadow-sm border-primary/10">
       <CardHeader className="bg-muted/30 pb-4 border-b">
@@ -41,13 +64,62 @@ export function ReservationList({ reservations, selectedDate }: ReservationListP
                   <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl", labInfo?.color)} />
                   
                   <div className="pl-3 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <p className="font-semibold text-sm line-clamp-1" title={res.requesterName}>
+                    <div className="flex justify-between items-start gap-3">
+                      <p className="min-w-0 font-semibold text-sm line-clamp-1" title={res.requesterName}>
                         {res.requesterName}
                       </p>
-                      <span className="text-xs font-medium bg-muted px-2 py-0.5 rounded-md whitespace-nowrap">
-                        {formatBrazilianDate(res.date)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium bg-muted px-2 py-0.5 rounded-md whitespace-nowrap">
+                          {formatBrazilianDate(res.date)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-xs"
+                          aria-label={`Editar reserva de ${res.requesterName}`}
+                          title="Editar reserva"
+                          onClick={() => onEditReservation(res)}
+                        >
+                          <Pencil />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon-xs"
+                              aria-label={`Excluir reserva de ${res.requesterName}`}
+                              title="Excluir reserva"
+                              disabled={deletingReservationId === res.id}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogMedia className="bg-destructive/10 text-destructive">
+                                <Trash2 />
+                              </AlertDialogMedia>
+                              <AlertDialogTitle>Excluir reserva?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação vai excluir a reserva de {res.requesterName} em {formatBrazilianDate(res.date)}, das {res.startTime} às {res.endTime}. Não será possível desfazer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={deletingReservationId === res.id}>
+                                Cancelar
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                variant="destructive"
+                                disabled={deletingReservationId === res.id}
+                                onClick={() => onDeleteReservation(res.id)}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                     
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">

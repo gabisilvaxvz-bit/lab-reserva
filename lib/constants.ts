@@ -14,9 +14,9 @@ export const LABORATORIES = [
   { id: "informatica", name: "Informática", color: "bg-purple-500" },
   { id: "matematica", name: "Matemática", color: "bg-emerald-500" },
   { id: "linguas", name: "Línguas", color: "bg-amber-500" },
-  { id: "Eletromecânica", name: "Eletromecânica", color: "bg-blue-500" },
-  {id: "Hardwere", name: "Hardwere", color: "bg-purple-500" },
-  {id: "Datashows", name: "Datashows", color: "bg-emerald-500" },
+  { id: "eletromecanica", name: "Eletromecânica", color: "bg-blue-500" },
+  { id: "hardwere", name: "Hardwere", color: "bg-purple-500" },
+  { id: "datashows", name: "Datashows", color: "bg-emerald-500" },
 ];
 
 export const MONTH_NAMES = [

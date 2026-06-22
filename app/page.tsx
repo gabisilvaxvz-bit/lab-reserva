@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 export default function ReservaLaboratorios() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [deletingReservationId, setDeletingReservationId] = useState<string | null>(null);
 
   const today = useMemo(() => {
     const currentDate = new Date();
@@ -28,6 +29,7 @@ export default function ReservaLaboratorios() {
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [reservationToEdit, setReservationToEdit] = useState<Reservation | null>(null);
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
 
@@ -101,6 +103,88 @@ export default function ReservaLaboratorios() {
     }
   };
 
+  const handleDeleteReservation = async (reservationId: string) => {
+    setDeletingReservationId(reservationId);
+
+    try {
+      const response = await fetch(`/api/reservations/${reservationId}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro desconhecido ao excluir reserva.");
+      }
+
+      setReservations((previousReservations) =>
+        previousReservations.filter((reservation) => reservation.id !== reservationId),
+      );
+      toast.success("Reserva excluída com sucesso!");
+    } catch (error) {
+      console.error("Erro ao excluir reserva:", error);
+      toast.error(error instanceof Error ? error.message : "Ocorreu um erro ao excluir a reserva.");
+    } finally {
+      setDeletingReservationId(null);
+    }
+  };
+
+  const handleEditReservation = async (updatedResData: Omit<Reservation, "id">) => {
+    if (!reservationToEdit) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`/api/reservations/${reservationToEdit.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedResData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro desconhecido ao editar reserva.");
+      }
+
+      setReservations((previousReservations) =>
+        sortReservationsByDateAndTime(
+          previousReservations.map((reservation) =>
+            reservation.id === reservationToEdit.id ? result.data : reservation,
+          ),
+        ),
+      );
+
+      setIsModalOpen(false);
+      setReservationToEdit(null);
+      toast.success("Reserva atualizada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao editar reserva:", error);
+      toast.error(error instanceof Error ? error.message : "Ocorreu um erro ao editar a reserva.");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenCreateModal = () => {
+    setReservationToEdit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (reservation: Reservation) => {
+    setReservationToEdit(reservation);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseReservationModal = () => {
+    setIsModalOpen(false);
+    setReservationToEdit(null);
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 font-sans text-foreground">
       <div className="max-w-7xl mx-auto">
@@ -108,7 +192,7 @@ export default function ReservaLaboratorios() {
         <Header 
           selectedFilter={selectedLabFilter} 
           onSelectFilter={setSelectedLabFilter} 
-          onOpenModal={() => setIsModalOpen(true)} 
+          onOpenModal={handleOpenCreateModal} 
         />
 
         {isLoadingData ? (
@@ -135,6 +219,9 @@ export default function ReservaLaboratorios() {
               <ReservationList 
                 reservations={upcomingReservations} 
                 selectedDate={selectedCalendarDate} 
+                onDeleteReservation={handleDeleteReservation}
+                onEditReservation={handleOpenEditModal}
+                deletingReservationId={deletingReservationId}
               />
             </div>
           </div>
@@ -142,10 +229,11 @@ export default function ReservaLaboratorios() {
 
         <ReservationModal 
           isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleAddReservation} 
+          onClose={handleCloseReservationModal} 
+          onSubmit={reservationToEdit ? handleEditReservation : handleAddReservation} 
           todayString={todayString}
           isLoading={isLoading}
+          reservationToEdit={reservationToEdit}
         />
 
       </div>
