@@ -67,6 +67,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // ==========================================
+    // NOVA VALIDAÇÃO: BLOQUEAR DIAS/HORAS PASSADAS E FINAIS DE SEMANA
+    // ==========================================
+    const agora = new Date();
+    
+    // Cria um objeto de data combinando o dia da reserva com o horário de início (Ex: "2026-06-22T07:10")
+    const dataHoraReserva = new Date(`${normalizedDate}T${normalizedStartTime}`);
+
+    // 1. Impede reservas no passado (compara data E hora simultaneamente)
+    if (dataHoraReserva < agora) {
+      return NextResponse.json(
+        { error: "Não é possível realizar reservas em uma data ou horário que já passou." },
+        { status: 400 }
+      );
+    }
+
+    // 2. Impede reservas nos finais de semana (0 = Domingo, 6 = Sábado)
+    const diaDaSemana = dataHoraReserva.getDay();
+    if (diaDaSemana === 0 || diaDaSemana === 6) {
+      return NextResponse.json(
+        { error: "Não é possível realizar reservas aos finais de semana." },
+        { status: 400 }
+      );
+    }
+    // ==========================================
+
     const overlappingReservation = await prisma.reservation.findFirst({
       where: {
         labId: normalizedLabId,
